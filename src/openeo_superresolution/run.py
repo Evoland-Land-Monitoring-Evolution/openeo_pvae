@@ -27,6 +27,10 @@ import sys
 from dataclasses import dataclass, field
 from typing import Dict, List
 
+DEPENDENCIES_URL: str = (
+    "https://artifactory.vgt.vito.be:443/auxdata-public/openeo/onnx_dependencies.zip"
+)
+
 import openeo
 
 from openeo_superresolution import __version__
@@ -45,7 +49,7 @@ _logger = logging.getLogger(__name__)
 
 
 def default_bands_list():
-    return ['B02', 'B03', 'B04', 'B08']
+    return ["B02", "B03", "B04", "B08", "B05", "B06", "B07", "B08", "B11", "B12"]
 
 
 @dataclass(frozen=True)
@@ -74,28 +78,27 @@ def process(parameters: Parameters) -> None:
         spatial_extent=parameters.spatial_extent,
         temporal_extent=[parameters.start_date, parameters.end_date],
         bands=parameters.bands,
-        max_cloud_cover=parameters.max_cloud_cover)
+        max_cloud_cover=parameters.max_cloud_cover,
+    )
 
-    udf_file = os.path.join(os.path.dirname(__file__), 'udf.py')
-    udf = openeo.UDF.from_file(udf_file, runtime='Python-Jep')
+    udf_file = os.path.join(os.path.dirname(__file__), "udf.py")
+    udf = openeo.UDF.from_file(udf_file, runtime="Python-Jep")
 
     # Process the cube with the UDF
-    sisr_s2_cube = s2_cube.apply_neighborhood(udf,
-                                              size=[{
-                                                  'dimension': 'x',
-                                                  'value':
-                                                  parameters.patch_size,
-                                                  'unit': 'px'
-                                              }, {
-                                                  'dimension': 'y',
-                                                  'value':
-                                                  parameters.patch_size,
-                                                  'unit': 'px'
-                                              }],
-                                              overlap=[])
-
-    download_job = sisr_s2_cube.save_result('NetCDF').create_job(
-        title='s2-sisr')
+    sisr_s2_cube = s2_cube.apply_neighborhood(
+        udf,
+        size=[
+            {"dimension": "x", "value": parameters.patch_size, "unit": "px"},
+            {"dimension": "y", "value": parameters.patch_size, "unit": "px"},
+        ],
+        overlap=[],
+    )
+    job_options = {
+        "udf-dependency-archives": [f"{DEPENDENCIES_URL}#tmp/extra_venv"],
+    }
+    download_job = sisr_s2_cube.save_result("NetCDF").create_job(
+        title="s2-sisr", job_options=job_options
+    )
     download_job.start_and_wait()
 
 
@@ -116,31 +119,29 @@ def parse_args(args):
       :obj:`argparse.Namespace`: command line parameters namespace
     """
     parser = argparse.ArgumentParser(
-        description=
-        "Run Single-Image Super-Resolution on OpenEO and download results")
+        description="Run Single-Image Super-Resolution on OpenEO and download results"
+    )
     parser.add_argument(
         "--version",
         action="version",
         version=f"openeo_superresolution {__version__}",
     )
-    parser.add_argument('--start_date',
-                        help="Start date (format: YYYY-MM-DD)",
-                        type=str,
-                        required=True)
-    parser.add_argument('--end_date',
-                        help="End date (format: YYYY-MM-DD)",
-                        type=str,
-                        required=True)
     parser.add_argument(
-        '--extent',
+        "--start_date", help="Start date (format: YYYY-MM-DD)", type=str, required=True
+    )
+    parser.add_argument(
+        "--end_date", help="End date (format: YYYY-MM-DD)", type=str, required=True
+    )
+    parser.add_argument(
+        "--extent",
         type=float,
         nargs=4,
-        help='Extent (west lat, east lat, south lon, north lon)',
-        required=True)
-    parser.add_argument('--output',
-                        type=str,
-                        help='Path to ouptput NetCDF file',
-                        required=True)
+        help="Extent (west lat, east lat, south lon, north lon)",
+        required=True,
+    )
+    parser.add_argument(
+        "--output", type=str, help="Path to ouptput NetCDF file", required=True
+    )
 
     return parser.parse_args(args)
 
@@ -158,17 +159,19 @@ def main(args):
     args = parse_args(args)
 
     # Build parameters
-    parameters = Parameters(spatial_extent={
-        'west': args.extent[0],
-        'east': args.extent[1],
-        'south': args.extent[2],
-        'north': args.extent[3]
-    },
-                            start_date=args.start_date,
-                            end_date=args.end_date,
-                            output_file=args.output)
+    parameters = Parameters(
+        spatial_extent={
+            "west": args.extent[0],
+            "east": args.extent[1],
+            "south": args.extent[2],
+            "north": args.extent[3],
+        },
+        start_date=args.start_date,
+        end_date=args.end_date,
+        output_file=args.output,
+    )
 
-    _logger.info(f'Parameters : {parameters}')
+    _logger.info(f"Parameters : {parameters}")
     process(parameters)
 
 
