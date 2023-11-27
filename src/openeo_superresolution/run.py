@@ -30,7 +30,7 @@ from typing import Dict, List
 DEPENDENCIES_URL: str = (
     "https://artifactory.vgt.vito.be:443/auxdata-public/openeo/onnx_dependencies.zip"
 )
-
+MODEL_URL: str = "https://framagit.org/jmichel-otb/openeo_superresolution/-/raw/master/models/carn_light.onnx.zip"
 import openeo
 
 from openeo_superresolution import __version__
@@ -65,7 +65,7 @@ class Parameters:
     overlap: int = 20
 
 
-def process(parameters: Parameters) -> None:
+def process(parameters: Parameters, output: str) -> None:
     """
     Main processing function
     """
@@ -91,15 +91,24 @@ def process(parameters: Parameters) -> None:
             {"dimension": "x", "value": parameters.patch_size, "unit": "px"},
             {"dimension": "y", "value": parameters.patch_size, "unit": "px"},
         ],
-        overlap=[],
+        overlap=[
+            {"dimension": "x", "value": 13, "unit": "px"},
+            {"dimension": "y", "value": 13, "unit": "px"},
+        ],
     )
     job_options = {
-        "udf-dependency-archives": [f"{DEPENDENCIES_URL}#tmp/extra_venv"],
+        "udf-dependency-archives": [
+            f"{DEPENDENCIES_URL}#tmp/extra_venv",
+            f"{MODEL_URL}#tmp/extra_files",
+        ],
     }
-    download_job = sisr_s2_cube.save_result("NetCDF").create_job(
+    download_job = sisr_s2_cube.save_result("GTiff").create_job(
         title="s2-sisr", job_options=job_options
     )
+
     download_job.start_and_wait()
+    os.makedirs(output, exist_ok=True)
+    download_job.get_results().download_files(output)
 
 
 # ---- CLI ----
@@ -172,7 +181,7 @@ def main(args):
     )
 
     _logger.info(f"Parameters : {parameters}")
-    process(parameters)
+    process(parameters, args.output)
 
 
 def run():

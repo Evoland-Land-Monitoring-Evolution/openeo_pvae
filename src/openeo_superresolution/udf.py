@@ -4,44 +4,13 @@
 """
 Provide the user-defined function to call super-resolution model
 """
-import hashlib
-import os
 import sys
 from typing import Dict
 
 import numpy as np
-import requests
 import xarray as xr
 from openeo.metadata import CollectionMetadata, SpatialDimension
 from openeo.udf import XarrayDataCube
-
-MODEL_URL: str = "https://mycore.core-cloud.net/index.php/s/VPw1fplsJUqVIFL/download"
-MODEL_SHA1: str = "5747117a56288453eea5ac0f763fa0a6b975f5fc"
-FORCE_ENV_RESET: bool = False
-
-
-def fetch_model_parameters():
-    """
-    Download model
-    """
-    model_download_path = "/data/users/Public/" + os.environ["USER"] + "/sisr_models"
-
-    # Ensure path exists
-    os.makedirs(model_download_path, exist_ok=True)
-
-    model_local_path = os.path.join(model_download_path, "model.onnx")
-
-    # Check if we need to download model
-    if (
-        not os.path.exists(model_local_path)
-        or hashlib.sha1(model_local_path).hexdigest() != MODEL_SHA1
-    ):
-        # In that case, download it with requests (timeout 10s)
-        requests_result = requests.get(MODEL_URL, timeout=10)
-        with open(model_local_path, "wb") as fd:
-            fd.write(requests_result.content)
-
-    return model_local_path
 
 
 def apply_metadata(metadata: CollectionMetadata, _: dict) -> CollectionMetadata:
@@ -65,7 +34,9 @@ def check_datacube(cube: xr.DataArray):
         raise RuntimeError("DataCube dimensions should be (t,bands, y, x)")
 
     if cube.data.shape[1] != 10:
-        raise RuntimeError("DataCube should have 4 bands exactly (B2, B3, B4, B8)")
+        raise RuntimeError(
+            "DataCube should have 10 bands exactly (B2, B3, B4, B8, B5, B6, B7, B8A, B11, B12)"
+        )
 
 
 def fancy_upsample_function(array: np.ndarray) -> np.ndarray:
@@ -79,13 +50,13 @@ def run_inference(input_data: np.ndarray) -> np.ndarray:
     sys.path.insert(0, "tmp/extra_venv")
     import onnxruntime as ort
 
-    model_file = fetch_model_parameters()
+    model_file = "tmp/extra_files/carn_light.onnx"
 
     # ONNX inference session options
     so = ort.SessionOptions()
-    so.intra_num_threads = 1
-    so.inter_num_threads = 1
-    so.use_deterministic = True
+    so.intra_op_num_threads = 1
+    so.inter_op_num_threads = 1
+    so.use_deterministic_compute = True
 
     # Execute on cpu only
     ep_list = ["CPUExecutionProvider"]
@@ -96,9 +67,9 @@ def run_inference(input_data: np.ndarray) -> np.ndarray:
     ro = ort.RunOptions()
     ro.add_run_config_entry("log_severity_level", "3")
 
-    outputs = ort_session.run(None, {"input": input_data}, run_options=ro)
+    outputs = ort_session.run(None, {"input": input_data[None, ...]}, run_options=ro)
 
-    return outputs[0]
+    return outputs[0][0, ...]
 
 
 def apply_datacube(cube: XarrayDataCube, context: Dict) -> XarrayDataCube:
@@ -106,47 +77,65 @@ def apply_datacube(cube: XarrayDataCube, context: Dict) -> XarrayDataCube:
     Apply UDF function to datacube
     """
     # We get data from datacube
-    cubearray: xr.DataArray = cube.get_array().copy()
+    cubearray: xr.DataArray
+    if isinstance(cube, xr.DataArray):
+        cubearray = cube
+    else:
+        cubearray: xr.DataArray = cube.get_array().copy()
 
     # NOTE: In the apply() process the cubes should always be (bands,y,x)
-    assert cubearray.data.ndim == 4
+    # assert cubearray.data.ndim == 4
 
     # Pixel size of the original image
     init_pixel_size_x = cubearray.coords["x"][-1] - cubearray.coords["x"][-2]
     init_pixel_size_y = cubearray.coords["y"][-1] - cubearray.coords["y"][-2]
 
-    cube_collection = []
-    # Perform inference for each date
-    for c in range(len(cubearray.data)):
-        predicted_array = run_inference(cubearray.data[c])
-        # predicted_array = fancy_upsample_function(cubearray.data[c])
-        cube_collection.append(predicted_array)
-
-    # Stack all dates
-    cube_collection = np.stack(cube_collection, axis=0)
-
     # Build new coordinates arrays
     coord_x = np.linspace(
-        start=cube.get_array().coords["x"].min(),
-        stop=cube.get_array().coords["x"].max() + init_pixel_size_x,
-        num=predicted_array.shape[-2],
+        start=cubearray.coords["x"].min(),
+        stop=cubearray.coords["x"].max() + init_pixel_size_x,
+        num=2 * cubearray.coords["x"].shape[0],
         endpoint=False,
     )
     # FIX: y coordinates go from max to min.
     coord_y = np.linspace(
-        start=cube.get_array().coords["y"].max(),
-        stop=cube.get_array().coords["y"].min() + init_pixel_size_y,
-        num=predicted_array.shape[-1],
+        start=cubearray.coords["y"].max(),
+        stop=cubearray.coords["y"].min() + init_pixel_size_y,
+        num=2 * cubearray.coords["y"].shape[0],
         endpoint=False,
     )
 
-    # Build output data array
-    # FIX: shape is (t,bands,y,x) on Terrascope backend. This is
-    # different in execute_local_udf, issue has been logged.
-    predicted_cube = xr.DataArray(
-        cube_collection,
-        dims=["t", "bands", "y", "x"],
-        coords=dict(x=coord_x, y=coord_y),
-    )
+    if cubearray.data.ndim == 4 and cubearray.data.shape[0] != 1:
+        cube_collection = []
+        # Perform inference for each date
+        for c in range(len(cubearray.data)):
+            predicted_array = run_inference(cubearray.data[c])
+            # predicted_array = fancy_upsample_function(cubearray.data[c])
+            cube_collection.append(predicted_array)
 
-    return predicted_cube
+        # Stack all dates
+        cube_collection = np.stack(cube_collection, axis=0)
+
+        # Build output data array
+        # FIX: shape is (t,bands,y,x) on Terrascope backend. This is
+        # different in execute_local_udf, issue has been logged.
+        predicted_cube = xr.DataArray(
+            cube_collection,
+            dims=["t", "bands", "y", "x"],
+            coords=dict(x=coord_x, y=coord_y),
+        )
+    else:
+        if cubearray.data.ndim == 4 and cubearray.data.shape[0] == 1:
+            cubearray = cubearray[0]
+
+        predicted_array = run_inference(cubearray.data)
+
+        # Build output data array
+        # FIX: shape is (t,bands,y,x) on Terrascope backend. This is
+        # different in execute_local_udf, issue has been logged.
+        predicted_cube = xr.DataArray(
+            predicted_array,
+            dims=["bands", "y", "x"],
+            coords=dict(x=coord_x, y=coord_y),
+        )
+    return XarrayDataCube(predicted_cube)
