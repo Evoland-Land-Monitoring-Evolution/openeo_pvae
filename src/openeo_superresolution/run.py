@@ -31,6 +31,8 @@ DEPENDENCIES_URL: str = (
     "https://artifactory.vgt.vito.be:443/auxdata-public/openeo/onnx_dependencies.zip"
 )
 MODEL_URL: str = "https://framagit.org/jmichel-otb/openeo_superresolution/-/raw/master/models/carn_light.onnx.zip"
+MARGIN: int = 13
+
 import openeo
 
 from openeo_superresolution import __version__
@@ -62,7 +64,7 @@ class Parameters:
     max_cloud_cover: int = 30
     openeo_instance: str = "openeo-dev.vito.be"
     patch_size: int = 256
-    overlap: int = 20
+    overlap: int = MARGIN
 
 
 def process(parameters: Parameters, output: str) -> None:
@@ -91,10 +93,12 @@ def process(parameters: Parameters, output: str) -> None:
             {"dimension": "x", "value": parameters.patch_size, "unit": "px"},
             {"dimension": "y", "value": parameters.patch_size, "unit": "px"},
         ],
-        overlap=[
-            {"dimension": "x", "value": 13, "unit": "px"},
-            {"dimension": "y", "value": 13, "unit": "px"},
-        ],
+        overlap=[]
+        # Restore the following when bug with overlap is fixed
+        # overlap=[
+        #     {"dimension": "x", "value": parameters.overlap, "unit": "px"},
+        #     {"dimension": "y", "value": parameters.overlap, "unit": "px"},
+        # ],
     )
     job_options = {
         "udf-dependency-archives": [
@@ -102,13 +106,19 @@ def process(parameters: Parameters, output: str) -> None:
             f"{MODEL_URL}#tmp/extra_files",
         ],
     }
-    download_job = sisr_s2_cube.save_result("GTiff").create_job(
+    download_job1 = sisr_s2_cube.save_result("GTiff").create_job(
         title="s2-sisr", job_options=job_options
     )
 
-    download_job.start_and_wait()
+    download_job1.start_and_wait()
     os.makedirs(output, exist_ok=True)
-    download_job.get_results().download_files(output)
+    download_job1.get_results().download_files(output)
+
+    download_job2 = s2_cube.save_result("GTiff").create_job(title="s2-orig")
+    download_job2.start_and_wait()
+    output = os.path.join(output, "original")
+    os.makedirs(output, exist_ok=True)
+    download_job2.get_results().download_files(output)
 
 
 # ---- CLI ----
