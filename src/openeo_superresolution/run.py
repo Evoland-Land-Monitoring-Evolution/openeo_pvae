@@ -51,7 +51,7 @@ _logger = logging.getLogger(__name__)
 
 
 def default_bands_list():
-    return ["B02", "B03", "B04", "B08", "B05", "B06", "B07", "B08", "B11", "B12"]
+    return ["B02", "B03", "B04", "B08", "B05", "B06", "B07", "B8A", "B11", "B12"]
 
 
 @dataclass(frozen=True)
@@ -62,7 +62,7 @@ class Parameters:
     output_file: str
     bands: List[str] = field(default_factory=default_bands_list)
     max_cloud_cover: int = 30
-    openeo_instance: str = "openeo-dev.vito.be"
+    openeo_instance: str = "openeo.vito.be"
     patch_size: int = 256
     overlap: int = MARGIN
 
@@ -76,7 +76,7 @@ def process(parameters: Parameters, output: str) -> None:
 
     # Search for the S2 datacube
     s2_cube = connection.load_collection(
-        "SENTINEL2_L2A",
+        "SENTINEL2_L2A_SENTINELHUB",
         spatial_extent=parameters.spatial_extent,
         temporal_extent=[parameters.start_date, parameters.end_date],
         bands=parameters.bands,
