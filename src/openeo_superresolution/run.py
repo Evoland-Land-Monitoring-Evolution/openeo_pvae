@@ -50,8 +50,12 @@ _logger = logging.getLogger(__name__)
 # when using this Python module as a library.
 
 
-def default_bands_list():
-    return ["B02", "B03", "B04", "B08", "B05", "B06", "B07", "B8A", "B11", "B12"]
+def default_bands_list_10m() -> list[str]:
+    return ["B02", "B03", "B04", "B08"]
+
+
+def default_bands_list_20m() -> list[str]:
+    return ["B05", "B06", "B07", "B8A", "B11", "B12"]
 
 
 @dataclass(frozen=True)
@@ -60,9 +64,11 @@ class Parameters:
     start_date: str
     end_date: str
     output_file: str
-    bands: List[str] = field(default_factory=default_bands_list)
+    bands_10m: List[str] = field(default_factory=default_bands_list_10m)
+    bands_20m: List[str] = field(default_factory=default_bands_list_20m)
     max_cloud_cover: int = 30
     openeo_instance: str = "openeo.vito.be"
+    collection: str = "SENTINEL2_L2A"
     patch_size: int = 256
     overlap: int = MARGIN
 
@@ -75,13 +81,22 @@ def process(parameters: Parameters, output: str) -> None:
     connection = openeo.connect(parameters.openeo_instance).authenticate_oidc()
 
     # Search for the S2 datacube
-    s2_cube = connection.load_collection(
-        "SENTINEL2_L2A_SENTINELHUB",
+    s2_cube_10m = connection.load_collection(
+        parameters.collection,
         spatial_extent=parameters.spatial_extent,
         temporal_extent=[parameters.start_date, parameters.end_date],
-        bands=parameters.bands,
+        bands=parameters.bands_10m,
         max_cloud_cover=parameters.max_cloud_cover,
     )
+    s2_cube_20m = connection.load_collection(
+        parameters.collection,
+        spatial_extent=parameters.spatial_extent,
+        temporal_extent=[parameters.start_date, parameters.end_date],
+        bands=parameters.bands_20m,
+        max_cloud_cover=parameters.max_cloud_cover,
+    )
+    s2_cube_20m = s2_cube_20m.resample_spatial(resolution=10, method="cubic")
+    s2_cube = s2_cube_10m.merge(s2_cube_20m)
 
     udf_file = os.path.join(os.path.dirname(__file__), "udf.py")
     udf = openeo.UDF.from_file(udf_file, runtime="Python-Jep")
