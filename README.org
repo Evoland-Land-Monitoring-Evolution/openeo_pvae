@@ -1,0 +1,30 @@
+#+TITLE: openeo_superresolution
+
+[[file:artwork/logo-Evoland-positive.png]]
+
+This repository is part of the [[https://www.evo-land.eu/][EVOLAND Horizon Europe]] project. It provides a User Defined Function to apply a Single Image Super-Resolution Convolutional Neural Network to Sentinel-2 Level 2A images, allowing to super-resolve bands B02, B03, B04, B05, B06; B06, B08, B8A, B11 and B12 bands  to 5 meters resolution. The network has been trained in the course of the project using the [[https://doi.org/10.5281/zenodo.6514159][Sen2Venµs dataset]], complimented with B11 and B12 patches.
+
+#+BEGIN_QUOTE
+Michel, J.; Vinasco-Salinas, J.; Inglada, J.; Hagolle, O. SEN2VENµS, a Dataset for the Training of Sentinel-2 Super-Resolution Algorithms. Data 2022, 7, 96. https://doi.org/10.3390/data7070096 
+#+END_QUOTE
+
+The respository include the [[file:src/openeo_superresolution/udf.py][User Defined Function]] implemented using a ONNX export of the best model, as well as a [[file:src/openeo_superresolution/run.py][runtime script]] allowing to use it with your OpenEO account.
+
+* Installation
+#+begin_src shell
+$ pip install -e git+https://framagit.org/jmichel-otb/openeo_superresolution.git
+#+end_src
+
+* Usage
+#+begin_src shell
+$ run_openeo_sisr --start_date 2020-07-05 --end_date 2020-07-30 --extent 5.1 5.25 51 51.1 --output results/
+#+end_src
+
+* Credits
+
+Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or the European Commission. Neither the European Union nor the European Commission can be held responsible for them.
+
+* Note
+
+This project has been set up using PyScaffold 4.5. For details and usage
+information on PyScaffold see https://pyscaffold.org/.
