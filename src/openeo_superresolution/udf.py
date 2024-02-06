@@ -50,7 +50,7 @@ def run_inference(input_data: np.ndarray) -> np.ndarray:
     sys.path.insert(0, "tmp/extra_venv")
     import onnxruntime as ort
 
-    model_file = "tmp/extra_files/carn_light.onnx"
+    model_file = "tmp/extra_files/carn_3x3x64g4sw_bootstrap.onnx"
 
     # ONNX inference session options
     so = ort.SessionOptions()
