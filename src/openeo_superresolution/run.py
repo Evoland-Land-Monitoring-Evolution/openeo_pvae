@@ -30,7 +30,7 @@ from typing import Dict, List
 DEPENDENCIES_URL: str = (
     "https://artifactory.vgt.vito.be:443/auxdata-public/openeo/onnx_dependencies.zip"
 )
-MODEL_URL: str = "https://framagit.org/jmichel-otb/openeo_superresolution/-/raw/master/models/carn_light.onnx.zip"
+MODEL_URL: str = "https://framagit.org/jmichel-otb/openeo_superresolution/-/raw/master/models/carn_3x3x64g4sw_bootstrap.onnx.zip"
 MARGIN: int = 13
 
 import openeo
@@ -96,7 +96,7 @@ def process(parameters: Parameters, output: str) -> None:
         max_cloud_cover=parameters.max_cloud_cover,
     )
     s2_cube_20m = s2_cube_20m.resample_spatial(resolution=10, method="cubic")
-    s2_cube = s2_cube_10m.merge(s2_cube_20m)
+    s2_cube = s2_cube_10m.merge_cubes(s2_cube_20m)
 
     udf_file = os.path.join(os.path.dirname(__file__), "udf.py")
     udf = openeo.UDF.from_file(udf_file, runtime="Python-Jep")
