@@ -25,13 +25,12 @@ import logging
 import os
 import sys
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 DEPENDENCIES_URL: str = (
     "https://artifactory.vgt.vito.be:443/auxdata-public/openeo/onnx_dependencies.zip"
 )
 MODEL_URL: str = "https://framagit.org/jmichel-otb/openeo_superresolution/-/raw/master/models/carn_3x3x64g4sw_bootstrap.onnx.zip"
-MARGIN: int = 13
 
 import openeo
 
@@ -70,7 +69,7 @@ class Parameters:
     openeo_instance: str = "openeo.vito.be"
     collection: str = "SENTINEL2_L2A"
     patch_size: int = 256
-    overlap: int = MARGIN
+    overlap: Optional[int] = None
 
 
 def process(parameters: Parameters, output: str) -> None:
@@ -101,6 +100,14 @@ def process(parameters: Parameters, output: str) -> None:
     udf_file = os.path.join(os.path.dirname(__file__), "udf.py")
     udf = openeo.UDF.from_file(udf_file, runtime="Python-Jep")
 
+    # Handle optional overlap paramater
+    overlap = []
+    if parameters.overlap is not None:
+        overlap = [
+            {"dimension": "x", "value": parameters.overlap, "unit": "px"},
+            {"dimension": "y", "value": parameters.overlap, "unit": "px"},
+        ]
+
     # Process the cube with the UDF
     sisr_s2_cube = s2_cube.apply_neighborhood(
         udf,
@@ -108,12 +115,7 @@ def process(parameters: Parameters, output: str) -> None:
             {"dimension": "x", "value": parameters.patch_size, "unit": "px"},
             {"dimension": "y", "value": parameters.patch_size, "unit": "px"},
         ],
-        overlap=[]
-        # Restore the following when bug with overlap is fixed
-        # overlap=[
-        #     {"dimension": "x", "value": parameters.overlap, "unit": "px"},
-        #     {"dimension": "y", "value": parameters.overlap, "unit": "px"},
-        # ],
+        overlap=overlap,
     )
     job_options = {
         "udf-dependency-archives": [
@@ -176,7 +178,20 @@ def parse_args(args):
     parser.add_argument(
         "--output", type=str, help="Path to ouptput NetCDF file", required=True
     )
+    parser.add_argument(
+        "--overlap",
+        required=False,
+        default=None,
+        type=int,
+        help="Overlap between patches to avoid border effects",
+    )
 
+    parser.add_argument(
+        "--instance",
+        type=str,
+        default="openeo.vito.be",
+        help="OpenEO instance on which to run the superresolution algorithm",
+    )
     return parser.parse_args(args)
 
 
@@ -200,9 +215,11 @@ def main(args):
             "south": args.extent[2],
             "north": args.extent[3],
         },
+        openeo_instance=args.instance,
         start_date=args.start_date,
         end_date=args.end_date,
         output_file=args.output,
+        overlap=args.overlap,
     )
 
     _logger.info(f"Parameters : {parameters}")

@@ -81,7 +81,7 @@ def apply_datacube(cube: XarrayDataCube, context: Dict) -> XarrayDataCube:
     if isinstance(cube, xr.DataArray):
         cubearray = cube
     else:
-        cubearray: xr.DataArray = cube.get_array().copy()
+        cubearray = cube.get_array().copy()
 
     # NOTE: In the apply() process the cubes should always be (bands,y,x)
     # assert cubearray.data.ndim == 4
