@@ -2,4 +2,4 @@
 Contributors
 ============
 
-* Julien Michel <julien.michel@cesbio.cnes.fr>
+* Ekaterina Kalinicheva <ekaterina.kalinicheva@univ-tlse3.fr>
