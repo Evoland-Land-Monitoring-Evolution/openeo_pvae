@@ -4,7 +4,7 @@ console script. To run this script uncomment the following lines in the
 ``[options.entry_points]`` section in ``setup.cfg``::
 
     console_scripts =
-         fibonacci = openeo_superresolution.skeleton:run
+         fibonacci = openeo_pvae.skeleton:run
 
 Then run ``pip install .`` (or ``pip install -e .`` for editable mode)
 which will install the command ``fibonacci`` inside your current environment.
@@ -30,14 +30,14 @@ from typing import Dict, List, Optional
 DEPENDENCIES_URL: str = (
     "https://artifactory.vgt.vito.be:443/auxdata-public/openeo/onnx_dependencies.zip"
 )
-MODEL_URL: str = "https://framagit.org/jmichel-otb/openeo_superresolution/-/raw/master/models/carn_3x3x64g4sw_bootstrap.onnx.zip"
+# MODEL_URL: str = "https://framagit.org/jmichel-otb/openeo_superresolution/-/raw/master/models/pva.torchscript"
 
 import openeo
+#
+# from openeo_pvae import __version__
 
-from openeo_superresolution import __version__
-
-__author__ = "Julien Michel"
-__copyright__ = "Julien Michel"
+__author__ = "Ekaterina Kalinicheva"
+__copyright__ = "Ekaterina Kalinicheva"
 __license__ = "AGPL-3.0-or-later"
 
 _logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ _logger = logging.getLogger(__name__)
 # ---- Python API ----
 # The functions defined in this section can be imported by users in their
 # Python scripts/interactive interpreter, e.g. via
-# `from openeo_superresolution.run import fib`,
+# `from openeo_pvae.run import fib`,
 # when using this Python module as a library.
 
 
@@ -56,6 +56,18 @@ def default_bands_list_10m() -> list[str]:
 def default_bands_list_20m() -> list[str]:
     return ["B05", "B06", "B07", "B8A", "B11", "B12"]
 
+# BANDS_S2 = ["B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B11", "B12"]
+# ANGLES_S2 = ["sunAzimuthAngles", "sunZenithAngles", "viewAzimuthMean", "viewZenithMean"]
+
+
+def default_bands_list() -> list[str]:
+    return ["B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B11", "B12"]
+
+def default_angles_list() -> list[str]:
+    return ["sunAzimuthAngles", "sunZenithAngles", "viewAzimuthMean", "viewZenithMean"]
+
+
+
 
 @dataclass(frozen=True)
 class Parameters:
@@ -63,11 +75,11 @@ class Parameters:
     start_date: str
     end_date: str
     output_file: str
-    bands_10m: List[str] = field(default_factory=default_bands_list_10m)
-    bands_20m: List[str] = field(default_factory=default_bands_list_20m)
+    # bands: List[str] = field(default_factory=default_bands_list)
+    # angles: List[str] = field(default_factory=default_angles_list)
     max_cloud_cover: int = 30
     openeo_instance: str = "openeo.vito.be"
-    collection: str = "SENTINEL2_L2A"
+    collection: str = "SENTINEL2_L2A_SENTINELHUB"
     patch_size: int = 256
     overlap: Optional[int] = None
 
@@ -80,22 +92,15 @@ def process(parameters: Parameters, output: str) -> None:
     connection = openeo.connect(parameters.openeo_instance).authenticate_oidc()
 
     # Search for the S2 datacube
-    s2_cube_10m = connection.load_collection(
+    s2_cube = connection.load_collection(
         parameters.collection,
         spatial_extent=parameters.spatial_extent,
         temporal_extent=[parameters.start_date, parameters.end_date],
-        bands=parameters.bands_10m,
+        # bands=parameters.bands + parameters.angles,
+        bands=default_bands_list() + default_angles_list(),
         max_cloud_cover=parameters.max_cloud_cover,
     )
-    s2_cube_20m = connection.load_collection(
-        parameters.collection,
-        spatial_extent=parameters.spatial_extent,
-        temporal_extent=[parameters.start_date, parameters.end_date],
-        bands=parameters.bands_20m,
-        max_cloud_cover=parameters.max_cloud_cover,
-    )
-    s2_cube_20m = s2_cube_20m.resample_spatial(resolution=10, method="cubic")
-    s2_cube = s2_cube_10m.merge_cubes(s2_cube_20m)
+
 
     udf_file = os.path.join(os.path.dirname(__file__), "udf.py")
     udf = openeo.UDF.from_file(udf_file, runtime="Python-Jep")
@@ -120,14 +125,14 @@ def process(parameters: Parameters, output: str) -> None:
     job_options = {
         "udf-dependency-archives": [
             f"{DEPENDENCIES_URL}#tmp/extra_venv",
-            f"{MODEL_URL}#tmp/extra_files",
+            # f"{MODEL_URL}#tmp/extra_files",
         ],
     }
     download_job1 = sisr_s2_cube.save_result("GTiff").create_job(
-        title="s2-sisr", job_options=job_options
+        title="pvae"#, job_options=job_options
     )
 
-    download_job1.start_and_wait()
+    download_job1.start()
     os.makedirs(output, exist_ok=True)
     download_job1.get_results().download_files(output)
 
@@ -157,11 +162,11 @@ def parse_args(args):
     parser = argparse.ArgumentParser(
         description="Run Single-Image Super-Resolution on OpenEO and download results"
     )
-    parser.add_argument(
-        "--version",
-        action="version",
-        version=f"openeo_superresolution {__version__}",
-    )
+    # parser.add_argument(
+    #     "--version",
+    #     action="version",
+    #     version=f"openeo_pvae {__version__}",
+    # )
     parser.add_argument(
         "--start_date", help="Start date (format: YYYY-MM-DD)", type=str, required=True
     )
@@ -243,6 +248,6 @@ if __name__ == "__main__":
     # After installing your project with pip, users can also run your Python
     # modules as scripts via the ``-m`` flag, as defined in PEP 338::
     #
-    #     python -m openeo_superresolution.skeleton 42
+    #     python -m openeo_pvae.skeleton 42
     #
     run()
