@@ -34,7 +34,7 @@ except ImportError:
     from sphinx import apidoc
 
 output_dir = os.path.join(__location__, "api")
-module_dir = os.path.join(__location__, "../src/openeo_superresolution")
+module_dir = os.path.join(__location__, "../src/openeo_pvae")
 try:
     shutil.rmtree(output_dir)
 except FileNotFoundError:
@@ -87,8 +87,8 @@ source_suffix = ".rst"
 master_doc = "index"
 
 # General information about the project.
-project = "openeo_superresolution"
-copyright = "2023, Julien Michel"
+project = "openeo_pvae"
+copyright = "2023, Ekaterina Kalinicheva"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -99,7 +99,7 @@ copyright = "2023, Julien Michel"
 # If you don’t need the separation provided between version and release,
 # just set them both to the same value.
 try:
-    from openeo_superresolution import __version__ as version
+    from openeo_pvae import __version__ as version
 except ImportError:
     version = ""
 
@@ -229,7 +229,7 @@ html_static_path = ["_static"]
 # html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = "openeo_superresolution-doc"
+htmlhelp_basename = "openeo_pvae-doc"
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -246,7 +246,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-    ("index", "user_guide.tex", "openeo_superresolution Documentation", "Julien Michel", "manual")
+    ("index", "user_guide.tex", "openeo_pvae Documentation", "Ekaterina Kalinicheva", "manual")
 ]
 
 # The name of an image file (relative to this directory) to place at the top of

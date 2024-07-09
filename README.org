@@ -1,4 +1,4 @@
-#+TITLE: openeo_superresolution
+#+TITLE: openeo_pvae
 
 [[file:artwork/logo-Evoland-positive.png]]
 
@@ -8,7 +8,7 @@ This repository is part of the [[https://www.evo-land.eu/][EVOLAND Horizon Europ
 Michel, J.; Vinasco-Salinas, J.; Inglada, J.; Hagolle, O. SEN2VENµS, a Dataset for the Training of Sentinel-2 Super-Resolution Algorithms. Data 2022, 7, 96. https://doi.org/10.3390/data7070096 
 #+END_QUOTE
 
-The respository include the [[file:src/openeo_superresolution/udf.py][User Defined Function]] implemented using a ONNX export of the best model, as well as a [[file:src/openeo_superresolution/run.py][runtime script]] allowing to use it with your OpenEO account.
+The respository include the [[file:src/openeo_pvae/udf.py][User Defined Function]] implemented using a ONNX export of the best model, as well as a [[file:src/openeo_superresolution/run.py][runtime script]] allowing to use it with your OpenEO account.
 
 * Installation
 #+begin_src shell
