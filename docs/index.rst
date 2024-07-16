@@ -1,8 +1,8 @@
 ======================
-openeo_superresolution
+openeo_pvae
 ======================
 
-This is the documentation of **openeo_superresolution**.
+This is the documentation of **openeo_pvae**.
 
 .. note::
 
