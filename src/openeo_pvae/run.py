@@ -24,23 +24,26 @@ import argparse
 import logging
 import os
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Optional
+
+from openeo import DataCube
 
 DEPENDENCIES_URL: str = (
     "https://artifactory.vgt.vito.be:443/auxdata-public/openeo/onnx_dependencies.zip"
 )
-# MODEL_URL: str = "https://framagit.org/jmichel-otb/openeo_superresolution/-/raw/master/models/pva.torchscript"
+MODEL_URL: str = "https://artifactory.vgt.vito.be/artifactory/evoland/prosailvae.onnx.zip"
 
 import openeo
-#
-# from openeo_pvae import __version__
+
+from openeo_pvae import __version__
 
 __author__ = "Ekaterina Kalinicheva"
 __copyright__ = "Ekaterina Kalinicheva"
 __license__ = "AGPL-3.0-or-later"
 
 _logger = logging.getLogger(__name__)
+
 
 # ---- Python API ----
 # The functions defined in this section can be imported by users in their
@@ -49,24 +52,12 @@ _logger = logging.getLogger(__name__)
 # when using this Python module as a library.
 
 
-def default_bands_list_10m() -> list[str]:
-    return ["B02", "B03", "B04", "B08"]
-
-
-def default_bands_list_20m() -> list[str]:
-    return ["B05", "B06", "B07", "B8A", "B11", "B12"]
-
-# BANDS_S2 = ["B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B11", "B12"]
-# ANGLES_S2 = ["sunAzimuthAngles", "sunZenithAngles", "viewAzimuthMean", "viewZenithMean"]
-
-
 def default_bands_list() -> list[str]:
     return ["B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B11", "B12"]
 
+
 def default_angles_list() -> list[str]:
-    return ["sunAzimuthAngles", "sunZenithAngles", "viewAzimuthMean", "viewZenithMean"]
-
-
+    return ["sunZenithAngles", "viewZenithAngles", "relativeAzimuthAngles"]
 
 
 @dataclass(frozen=True)
@@ -75,11 +66,9 @@ class Parameters:
     start_date: str
     end_date: str
     output_file: str
-    # bands: List[str] = field(default_factory=default_bands_list)
-    # angles: List[str] = field(default_factory=default_angles_list)
     max_cloud_cover: int = 30
     openeo_instance: str = "openeo.vito.be"
-    collection: str = "SENTINEL2_L2A_SENTINELHUB"
+    collection: str = "SENTINEL2_L2A"
     patch_size: int = 256
     overlap: Optional[int] = None
 
@@ -92,20 +81,19 @@ def process(parameters: Parameters, output: str) -> None:
     connection = openeo.connect(parameters.openeo_instance).authenticate_oidc()
 
     # Search for the S2 datacube
-    s2_cube = connection.load_collection(
+    s2_cube: DataCube = connection.load_collection(
         parameters.collection,
         spatial_extent=parameters.spatial_extent,
         temporal_extent=[parameters.start_date, parameters.end_date],
-        # bands=parameters.bands + parameters.angles,
         bands=default_bands_list() + default_angles_list(),
         max_cloud_cover=parameters.max_cloud_cover,
+        fetch_metadata=True
     )
-
 
     udf_file = os.path.join(os.path.dirname(__file__), "udf.py")
     udf = openeo.UDF.from_file(udf_file, runtime="Python-Jep")
 
-    # Handle optional overlap paramater
+    # Handle optional overlap parameter
     overlap = []
     if parameters.overlap is not None:
         overlap = [
@@ -125,18 +113,18 @@ def process(parameters: Parameters, output: str) -> None:
     job_options = {
         "udf-dependency-archives": [
             f"{DEPENDENCIES_URL}#tmp/extra_venv",
-            # f"{MODEL_URL}#tmp/extra_files",
+            f"{MODEL_URL}#tmp/extra_files",
         ],
     }
-    download_job1 = sisr_s2_cube.save_result("GTiff").create_job(
-        title="pvae"#, job_options=job_options
+    download_job1 = sisr_s2_cube.save_result("netCDF").create_job(
+        title="pvae", job_options=job_options
     )
 
-    download_job1.start()
+    download_job1.start_and_wait()
     os.makedirs(output, exist_ok=True)
     download_job1.get_results().download_files(output)
 
-    download_job2 = s2_cube.save_result("GTiff").create_job(title="s2-orig")
+    download_job2 = s2_cube.save_result("netCDF").create_job(title="s2-orig")
     download_job2.start_and_wait()
     output = os.path.join(output, "original")
     os.makedirs(output, exist_ok=True)
@@ -160,13 +148,13 @@ def parse_args(args):
       :obj:`argparse.Namespace`: command line parameters namespace
     """
     parser = argparse.ArgumentParser(
-        description="Run Single-Image Super-Resolution on OpenEO and download results"
+        description="Run Single-Image prosailVAE embedding model on OpenEO and download results"
     )
-    # parser.add_argument(
-    #     "--version",
-    #     action="version",
-    #     version=f"openeo_pvae {__version__}",
-    # )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"openeo_pvae {__version__}",
+    )
     parser.add_argument(
         "--start_date", help="Start date (format: YYYY-MM-DD)", type=str, required=True
     )
@@ -195,7 +183,7 @@ def parse_args(args):
         "--instance",
         type=str,
         default="openeo.vito.be",
-        help="OpenEO instance on which to run the superresolution algorithm",
+        help="OpenEO instance on which to run the pvae algorithm",
     )
     return parser.parse_args(args)
 
