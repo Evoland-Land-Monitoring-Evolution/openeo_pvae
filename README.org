@@ -1,23 +1,22 @@
-#+TITLE: openeo_superresolution
+#+TITLE: openeo_pvae
 
 [[file:artwork/logo-Evoland-positive.png]]
 
-This repository is part of the [[https://www.evo-land.eu/][EVOLAND Horizon Europe]] project. It provides a User Defined Function to apply a Single Image Super-Resolution Convolutional Neural Network to Sentinel-2 Level 2A images, allowing to super-resolve bands B02, B03, B04, B05, B06; B06, B08, B8A, B11 and B12 bands  to 5 meters resolution. The network has been trained in the course of the project using the [[https://doi.org/10.5281/zenodo.6514159][Sen2Venµs dataset]], complimented with B11 and B12 patches.
-
+This repository is part of the [[https://www.evo-land.eu/][EVOLAND Horizon Europe]] project. It provides a User Defined Function to extract Sentinel-2 embeddings with prosailVAE model. The embeddings present mean and log-variance of 11 bio-physical variables (22 features in total).
 #+BEGIN_QUOTE
-Michel, J.; Vinasco-Salinas, J.; Inglada, J.; Hagolle, O. SEN2VENµS, a Dataset for the Training of Sentinel-2 Super-Resolution Algorithms. Data 2022, 7, 96. https://doi.org/10.3390/data7070096 
+Y. Zérah, S. Valero and J. Inglada, "Physics-Driven Probabilistic Deep Learning for the Inversion of Physical Models With Application to Phenological Parameter Retrieval From Satellite Times Series," in IEEE Transactions on Geoscience and Remote Sensing, vol. 61, pp. 1-23, 2023, Art no. 4404723, doi: 10.1109/TGRS.2023.3284992.
 #+END_QUOTE
 
-The respository include the [[file:src/openeo_superresolution/udf.py][User Defined Function]] implemented using a ONNX export of the best model, as well as a [[file:src/openeo_superresolution/run.py][runtime script]] allowing to use it with your OpenEO account.
+The respository include the [[file:src/openeo_pvae/udf.py][User Defined Function]] implemented using a ONNX export of the best model, as well as a [[file:src/openeo_superresolution/run.py][runtime script]] allowing to use it with your OpenEO account.
 
 * Installation
 #+begin_src shell
-$ pip install -e git+https://framagit.org/jmichel-otb/openeo_superresolution.git
+$ pip install -e git+https://github.com/ekalinicheva/openeo_pvae.git
 #+end_src
 
 * Usage
 #+begin_src shell
-$ run_openeo_sisr --start_date 2020-07-05 --end_date 2020-07-30 --extent 5.1 5.25 51 51.1 --output results/
+$ run_openeo_pvae --start_date 2020-07-05 --end_date 2020-07-30 --extent 5.1 5.25 51 51.1 --output results/
 #+end_src
 
 * Credits

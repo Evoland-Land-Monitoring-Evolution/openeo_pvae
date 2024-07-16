@@ -1,9 +1,9 @@
 import pytest
 
-from openeo_superresolution.skeleton import fib, main
+from openeo_pvae.skeleton import fib, main
 
-__author__ = "Julien Michel"
-__copyright__ = "Julien Michel"
+__author__ = "Ekaterina Kalinicheva"
+__copyright__ = "Ekaterina Kalinicheva"
 __license__ = "AGPL-3.0-or-later"
 
 
