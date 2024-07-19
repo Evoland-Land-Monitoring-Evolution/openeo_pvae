@@ -137,7 +137,7 @@ def apply_datacube(cube: XarrayDataCube, context: Dict) -> XarrayDataCube:
         predicted_cube = xr.DataArray(
             cube_collection,
             dims=["t", "bands", "y", "x"],
-            coords=dict(x=cubearray.coords["x"], y=cubearray.coords["y"]),
+            coords=dict(t=cubearray.coords["t"], x=cubearray.coords["x"], y=cubearray.coords["y"]),
         )
     else:
         if cubearray.data.shape[0] == 1:
