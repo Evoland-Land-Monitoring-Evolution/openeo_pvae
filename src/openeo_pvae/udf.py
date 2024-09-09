@@ -5,7 +5,6 @@
 Provide the user-defined function to call prosailVAE model
 for Sentinel-2 data embedding
 """
-import logging
 import sys
 from typing import Dict
 

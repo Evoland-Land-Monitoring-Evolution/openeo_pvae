@@ -29,13 +29,6 @@ __license__ = "AGPL-3.0-or-later"
 _logger = logging.getLogger(__name__)
 
 
-# ---- Python API ----
-# The functions defined in this section can be imported by users in their
-# Python scripts/interactive interpreter, e.g. via
-# `from openeo_pvae.run import fib`,
-# when using this Python module as a library.
-
-
 def default_bands_list() -> list[str]:
     return ["B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B11", "B12"]
 
@@ -115,12 +108,6 @@ def process(parameters: Parameters, output: str) -> None:
     download_job2.get_results().download_files(output)
 
 
-# ---- CLI ----
-# The functions defined in this section are wrappers around the main Python
-# API allowing them to be called directly from the terminal as a CLI
-# executable/script.
-
-
 def parse_args(args):
     """Parse command line parameters
 
@@ -173,11 +160,7 @@ def parse_args(args):
 
 
 def main(args):
-    """Wrapper allowing :func:`fib` to be called with string arguments in a CLI fashion
-
-    Instead of returning the value from :func:`fib`, it prints the result to the
-    ``stdout`` in a nicely formatted message.
-
+    """
     Args:
       args (List[str]): command line parameters as list of strings
           (for example  ``["--verbose", "42"]``).
