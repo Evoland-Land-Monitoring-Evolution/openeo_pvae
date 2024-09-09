@@ -1,23 +1,5 @@
 """
-This is a skeleton file that can serve as a starting point for a Python
-console script. To run this script uncomment the following lines in the
-``[options.entry_points]`` section in ``setup.cfg``::
-
-    console_scripts =
-         fibonacci = openeo_pvae.skeleton:run
-
-Then run ``pip install .`` (or ``pip install -e .`` for editable mode)
-which will install the command ``fibonacci`` inside your current environment.
-
-Besides console scripts, the header (i.e. until ``_logger``...) of this file can
-also be used as template for Python modules.
-
-Note:
-    This file can be renamed depending on your needs or safely removed if not needed.
-
-References:
-    - https://setuptools.pypa.io/en/latest/userguide/entry_point.html
-    - https://pip.pypa.io/en/stable/reference/pip_install
+ProsailVAE embedding with OpenEO
 """
 
 import argparse
@@ -102,7 +84,7 @@ def process(parameters: Parameters, output: str) -> None:
         ]
 
     # Process the cube with the UDF
-    sisr_s2_cube = s2_cube.apply_neighborhood(
+    pvae_s2_cube = s2_cube.apply_neighborhood(
         udf,
         size=[
             {"dimension": "x", "value": parameters.patch_size, "unit": "px"},
@@ -116,7 +98,7 @@ def process(parameters: Parameters, output: str) -> None:
             f"{MODEL_URL}#tmp/extra_files",
         ],
     }
-    download_job1 = sisr_s2_cube.save_result("netCDF").create_job(
+    download_job1 = pvae_s2_cube.save_result("netCDF").create_job(
         title="pvae", job_options=job_options
     )
 

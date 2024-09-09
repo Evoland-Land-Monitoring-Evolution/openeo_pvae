@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright: (c) 2023 CESBIO / Centre National d'Etudes Spatiales
+# Copyright: (c) 2024 CESBIO / Centre National d'Etudes Spatiales
 """
 Provide the user-defined function to call prosailVAE model
 for Sentinel-2 data embedding
@@ -34,14 +34,14 @@ def check_datacube(cube: xr.DataArray):
 
     if cube.data.shape[1] != 13:
         raise RuntimeError(
-            "DataCube should have 14 bands exactly (B2, B3, B4, B8, B5, B6, B7, B8A, B11, B12, sunAzimuthAngles, "
-            "sunZenithAngles, viewAzimuthMean, viewZenithMean)"
+            "DataCube should have 13 bands exactly (B2, B3, B4, B8, B5, B6, B7, B8A, B11, B12, "
+            "sunZenithAngles, viewZenithAngles, relativeAzimuthAngles)"
         )
 
 
 def run_inference(input_data: np.ndarray) -> np.ndarray:
     """
-    Inference function for Sentinel2 embeddings with prosailVAE.
+    Inference function for Sentinel-2 embeddings with prosailVAE.
     The input should be in shape (B, C, H, W)
     The output shape is (B, 22, H, W)
     """
@@ -65,7 +65,6 @@ def run_inference(input_data: np.ndarray) -> np.ndarray:
 
     ro = ort.RunOptions()
     ro.add_run_config_entry("log_severity_level", "3")
-    logging.info(input_data.shape)
 
     # We transform input data in right format
     s2_ref, s2_angles = input_data[:, :10].astype(np.float32), input_data[:, 10:].astype(np.float32)
@@ -98,38 +97,6 @@ def apply_datacube(cube: XarrayDataCube, context: Dict) -> XarrayDataCube:
         cubearray = cube
     else:
         cubearray = cube.get_array().copy()
-
-    # if cubearray.data.ndim == 4:
-    #     cube_collection = []
-    #     # Perform inference for each date
-    #     for c in range(len(cubearray.data)):
-    #         predicted_array = run_inference(cubearray.data[c][None, :, :, :])
-    #         # predicted_array = fancy_upsample_function(cubearray.data[c])
-    #         cube_collection.append(predicted_array[0])
-    #
-    #     # Stack all dates
-    #     cube_collection = np.stack(cube_collection, axis=0)
-    #
-    #     # Build output data array
-    #     # FIX: shape is (t,bands,y,x) on Terrascope backend. This is
-    #     # different in execute_local_udf, issue has been logged.
-    #     predicted_cube = xr.DataArray(
-    #         cube_collection,
-    #         dims=["t", "bands", "y", "x"],
-    #         coords=dict(x=cubearray.coords["x"], y=cubearray.coords["y"]),
-    #     )
-    # else:
-    #
-    #     predicted_array = run_inference(cubearray.data[None, :, :, :])
-    #
-    #     # Build output data array
-    #     # FIX: shape is (t,bands,y,x) on Terrascope backend. This is
-    #     # different in execute_local_udf, issue has been logged.
-    #     predicted_cube = xr.DataArray(
-    #         predicted_array[0],
-    #         dims=["bands", "y", "x"],
-    #         coords=dict(x=cubearray.coords["x"], y=cubearray.coords["y"]),
-    #     )
 
     if cubearray.data.ndim == 4 and cubearray.data.shape[0] != 1:
         cube_collection = run_inference(cubearray.data)
