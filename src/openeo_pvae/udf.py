@@ -20,6 +20,7 @@ NEW_BANDS = ["F01_mu", "F02_mu", "F03_mu", "F04_mu", "F05_mu", "F06_mu", "F07_mu
 
 
 def apply_metadata(metadata: CollectionMetadata, context: dict) -> CollectionMetadata:
+    """Apply metadata"""
     return metadata.rename_labels(
         dimension="band",
         target=NEW_BANDS
@@ -97,24 +98,11 @@ def apply_datacube(cube: XarrayDataCube, context: Dict) -> XarrayDataCube:
     else:
         cubearray = cube.get_array().copy()
 
-    if cubearray.data.ndim == 4 and cubearray.data.shape[0] != 1:
-        cube_collection = run_inference(cubearray.data)
-        # Build output data array
-        predicted_cube = xr.DataArray(
-            cube_collection,
-            dims=["t", "bands", "y", "x"],
-            coords=dict(t=cubearray.coords["t"], x=cubearray.coords["x"], y=cubearray.coords["y"]),
-        )
-    else:
-        if cubearray.data.shape[0] == 1:
-            predicted_array = run_inference(cubearray.data)
-        else:
-            predicted_array = run_inference(cubearray.data[None, :, :, :])
+    cube_collection = run_inference(cubearray.data)
 
-        # Build output data array
-        predicted_cube = xr.DataArray(
-            predicted_array[0],
-            dims=["bands", "y", "x"],
-            coords=dict(x=cubearray.coords["x"], y=cubearray.coords["y"]),
-        )
+    predicted_cube = xr.DataArray(
+        cube_collection,
+        dims=cubearray.dims,
+        coords=dict(t=cubearray.coords["t"], x=cubearray.coords["x"], y=cubearray.coords["y"]),
+    )
     return XarrayDataCube(predicted_cube)
