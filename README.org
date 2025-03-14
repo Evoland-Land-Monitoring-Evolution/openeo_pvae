@@ -11,7 +11,7 @@ The respository include the [[file:src/openeo_pvae/udf.py][User Defined Function
 
 * Installation
 #+begin_src shell
-$ pip install -e git+https://github.com/ekalinicheva/openeo_pvae.git
+$ pip install -e git+https://github.com/Evoland-Land-Monitoring-Evolution/openeo_pvae.git
 #+end_src
 
 * Usage
